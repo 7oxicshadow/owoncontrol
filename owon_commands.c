@@ -4,16 +4,6 @@
 #include "usb_interface.h"
 #include "owon_commands.h"
 
-channel_st current_ch1_vars = {0xFF, 0xFF, 0xFF, 0xFF};
-channel_st updated_ch1_vars = {DC_CPL, PRB_X1, VOLT_10V, 0};
-channel_st current_ch2_vars = {0xFF, 0xFF, 0xFF, 0xFF};
-channel_st updated_ch2_vars = {DC_CPL, PRB_X1, VOLT_10V, 0};
-tbase_e current_timebase_var = 0xFF;
-tbase_e updated_timebase_var = TBASE_10MS;
-memory_e current_memory_var = 0xFF;
-memory_e updated_memory_var = MEM_10M;
-int horiz_pos = 0xFFFFFFFF;
-
 void set_coupling(channel_e chan)
 {
     int value = 0;
@@ -25,10 +15,10 @@ void set_coupling(channel_e chan)
 
         if(value < NUM_CPL_ENTRIES)
         {
-            if(chan == CHANNEL_1)
-                updated_ch1_vars.ch_coupling = value;
-            else
-                updated_ch2_vars.ch_coupling = value;
+            coupling_data[9] = chan;
+            coupling_data[11] = value;
+            printf("Updating CH1 Coupling\n");
+            send_usb_data(coupling_data, sizeof(coupling_data));
         }
         else
             printf("Value out of range!\n");
@@ -50,10 +40,10 @@ void set_probescale(channel_e chan)
 
         if(value < NUM_PRB_ENTRIES)
         {
-            if(chan == CHANNEL_1)
-                updated_ch1_vars.ch_prb_scale = value;
-            else
-                updated_ch2_vars.ch_prb_scale = value;
+            probe_scale_data[9] = chan;
+            probe_scale_data[11] = value;
+            printf("Updating CH1 Probe Scale\n");
+            send_usb_data(probe_scale_data, sizeof(probe_scale_data));
         }
         else
         {
@@ -80,10 +70,10 @@ void set_voltscale(channel_e chan)
 
         if(value < NUM_VOLT_ENTRIES)
         {
-            if(chan == CHANNEL_1)
-                updated_ch1_vars.ch_volt_range = value;
-            else
-                updated_ch2_vars.ch_volt_range = value;
+            volt_range_data[9] = chan;
+            volt_range_data[11] = value;
+            printf("Updating CH2 Volt Range\n");
+            send_usb_data(volt_range_data, sizeof(volt_range_data));
         }
         else
         {
@@ -107,10 +97,13 @@ void set_tracepos(channel_e chan)
 
         if( (value >= -250) && (value <= 250) )
         {
-            if(chan == CHANNEL_1)
-                updated_ch1_vars.tracepos = value;
-            else
-                updated_ch2_vars.tracepos = value;
+            tracepos_data[9] = chan;
+            tracepos_data[11] = (char) ((value >> 24) & 0x000000FF);
+            tracepos_data[12] = (char) ((value >> 16) & 0x000000FF);
+            tracepos_data[13] = (char) ((value >> 8) & 0x000000FF);
+            tracepos_data[14] = (char) ((value) & 0x000000FF);
+            printf("Updating CH2 Trace Position\n");
+            send_usb_data(tracepos_data, sizeof(tracepos_data));
         }
         else
         {
@@ -131,9 +124,15 @@ void set_memrange(void)
     scanf("%d", &value);
 
     if(value < NUM_MEM_ENTRIES)
-        updated_memory_var = value;
+    {
+        memory_range_data[9] = value;
+        printf("Updating Memory Depth\n");
+        send_usb_data(memory_range_data, sizeof(memory_range_data));
+    }
     else
+    {
         printf("Value out of range!\n");
+    }
 }
 
 void set_timebase(void)
@@ -152,43 +151,38 @@ void set_timebase(void)
     scanf("%d", &value);
 
     if(value < NUM_TBASE_ENTRIES)
-        updated_timebase_var = value;
+    {
+        timebase_data[10] = value;
+        printf("Updating Timebase\n");
+        send_usb_data(timebase_data, sizeof(timebase_data));
+    }
     else
+    {
         printf("Value out of range!\n");
+    }
 }
 
 void force_trigger(void)
 {
-    int local_ret = 0;
-    int local_written = 0;
-
     printf("Send Force Trigger Command\n");
     send_usb_data(force_trig_data, sizeof(force_trig_data));
 }
 
 void set_50pct_trigger(void)
 {
-    int local_ret = 0;
-    int local_written = 0;
-
     printf("Send 50pct Trigger Command\n");
     send_usb_data(set_50pct_trig_data, sizeof(set_50pct_trig_data));
 }
 
 void set_0_trigger(void)
 {
-    int local_ret = 0;
-    int local_written = 0;
-
-    printf("Send 50pct Trigger Command\n");
+    printf("Send 0 Trigger Command\n");
     send_usb_data(set_0_trig_data, sizeof(set_0_trig_data));
 }
 
 void set_horiz_trigger_pos(void)
 {
     int value = 0;
-    int local_ret = 0;
-    int local_written = 0;
 
     printf("Enter decimal value between -10000 and +10000\n");
 
@@ -212,10 +206,7 @@ void set_horiz_trigger_pos(void)
 
 void set_acqu_mode(acqu_e mode)
 {
-    int acqu_data_length;
     int value = 0;
-    int local_ret = 0;
-    int local_written = 0;
 
     if(mode < NUM_ACQU_ENTRIES)
     {
@@ -229,8 +220,6 @@ void set_acqu_mode(acqu_e mode)
 void set_avg_acqu_mode(void)
 {
     int value = 0;
-    int local_ret = 0;
-    int local_written = 0;
 
     printf("0=4_SAMPLES, 1=16_SAMPLES, 2=64_SAMPLES, 3=128_SAMPLES\n");
     scanf("%d", &value);
@@ -248,12 +237,40 @@ void set_avg_acqu_mode(void)
     }
 }
 
-void set_trigger_opts(void)
+void select_trigger_type(void)
 {
     int value = 0;
-    int local_ret = 0;
-    int local_written = 0;
-    int transmit_flag = TRUE; /* Assume we will send, any out of range will cancel */
+
+    printf("0=TRIG_TYPE_SINGLE 1=TRIG_TYPE_ALT 2=TRIG_TYPE_VIDEO\n");
+    scanf("%d", &value);
+
+    if(value < NUM_TRIG_MODE_ENTRIES)
+    {
+        switch(value)
+        {
+            case TRIG_TYPE_SINGLE:
+                set_edge_or_alt_trigger(TRIG_TYPE_SINGLE);
+                break;
+            case TRIG_TYPE_ALT:
+                set_edge_or_alt_trigger(TRIG_TYPE_ALT);
+                break;
+            case TRIG_TYPE_VIDEO:
+                set_video_trigger();
+                break;
+            default:
+                break;
+        }
+    }
+    else
+    {
+        printf("Value out of range\n");
+    }
+
+}
+
+void set_edge_or_alt_trigger(int mode)
+{
+    int value = 0;
 
     printf("0=CHANNEL_1 1=CHANNEL_2\n");
     scanf("%d", &value);
@@ -269,13 +286,10 @@ void set_trigger_opts(void)
     else
     {
             printf("Out of range\n");
-            transmit_flag = FALSE;
+            return;
     }
 
-    printf("0=SINGLE 1=ALT 2=VIDEO\n");
-    scanf("%d", &value);
-
-    switch(value)
+    switch(mode)
     {
         case TRIG_TYPE_SINGLE:
             edge_trigger_data[9] = 0x73;
@@ -293,7 +307,7 @@ void set_trigger_opts(void)
             break;
         default:
             printf("Out of range\n");
-            transmit_flag = FALSE;
+            return;
             break;
     }
 
@@ -307,7 +321,7 @@ void set_trigger_opts(void)
     else
     {
         printf("Out of range\n");
-        transmit_flag = FALSE;
+        return;
     }
 
     printf("0=TRIG_CPL_DC 1=TRIG_CPL_AC 2=TRIG_CPL_HF 3=TRIG_CPL_LF\n");
@@ -320,7 +334,7 @@ void set_trigger_opts(void)
     else
     {
         printf("Out of range\n");
-        transmit_flag = FALSE;
+        return;
     }
 
     printf("0=TRIG_MODE_AUTO 1=TRIG_MODE_NORMAL 2=TRIG_MODE_ONCE\n");
@@ -333,7 +347,7 @@ void set_trigger_opts(void)
     else
     {
         printf("Out of range\n");
-        transmit_flag = FALSE;
+        return;
     }
 
     printf("Enter Trigger Offset between -10000 and +10000\n");
@@ -346,141 +360,133 @@ void set_trigger_opts(void)
         edge_trigger_data[49] = (char) ((value >> 16) & 0x000000FF);
         edge_trigger_data[50] = (char) ((value >> 8) & 0x000000FF);
         edge_trigger_data[51] = (char) (value & 0x000000FF);
+
+        printf("Send Trigger Opts Command\n");
+        send_usb_data(edge_trigger_data, sizeof(edge_trigger_data));
     }
     else
     {
         printf("Value out of range!\n");
-        transmit_flag = FALSE;
-    }
-
-    if(TRUE == transmit_flag)
-    {
-        printf("Send Trigger Opts Command\n");
-        send_usb_data(edge_trigger_data, sizeof(edge_trigger_data));
+        return;
     }
 }
 
-void check_changes(void)
+void set_video_trigger(void)
 {
-  int local_ret = 0;
-  int local_written = 0;
+    int value = 0;
 
-  if (current_ch1_vars.ch_coupling != updated_ch1_vars.ch_coupling)
-  {
-      if(updated_ch1_vars.ch_coupling < NUM_CPL_ENTRIES)
-      {
-          coupling_data[9] = CHANNEL_1;
-          coupling_data[11] = updated_ch1_vars.ch_coupling;
-          printf("Updating CH1 Coupling\n");
-          send_usb_data(coupling_data, sizeof(coupling_data));
-          current_ch1_vars.ch_coupling = updated_ch1_vars.ch_coupling;
-      }
-  }
+    printf("0=CHANNEL_1 1=CHANNEL_2\n");
+    scanf("%d", &value);
 
-  if (current_ch1_vars.ch_prb_scale != updated_ch1_vars.ch_prb_scale)
-  {
-      if(updated_ch1_vars.ch_prb_scale < NUM_PRB_ENTRIES)
-      {
-          probe_scale_data[9] = CHANNEL_1;
-          probe_scale_data[11] = updated_ch1_vars.ch_prb_scale;
-          printf("Updating CH1 Probe Scale\n");
-          send_usb_data(probe_scale_data, sizeof(probe_scale_data));
-          current_ch1_vars.ch_prb_scale = updated_ch1_vars.ch_prb_scale;
-      }
-  }
+    if(value < NUM_CHANNEL_ENTRIES)
+    {
+        /* We dont know if we will use line mode or not. Best to update
+           both messaages at the same time */
 
-  if (current_ch1_vars.ch_volt_range != updated_ch1_vars.ch_volt_range)
-  {
-      if(updated_ch1_vars.ch_volt_range < NUM_VOLT_ENTRIES)
-      {
-          volt_range_data[9] = CHANNEL_1;
-          volt_range_data[11] = updated_ch1_vars.ch_volt_range;
-          printf("Updating CH1 Volt Range\n");
-          send_usb_data(volt_range_data, sizeof(volt_range_data));
-          current_ch1_vars.ch_volt_range = updated_ch1_vars.ch_volt_range;
-      }
-  }
+        video_trigger_data[10] = value;
+        video_trigger_data[18] = value;
+        video_trigger_data[26] = value;
 
-  if (current_ch1_vars.tracepos != updated_ch1_vars.tracepos)
-  {
-      tracepos_data[9] = CHANNEL_1;
-      tracepos_data[11] = (char) ((updated_ch1_vars.tracepos >> 24) & 0x000000FF);
-      tracepos_data[12] = (char) ((updated_ch1_vars.tracepos >> 16) & 0x000000FF);
-      tracepos_data[13] = (char) ((updated_ch1_vars.tracepos >> 8) & 0x000000FF);
-      tracepos_data[14] = (char) ((updated_ch1_vars.tracepos) & 0x000000FF);
+        /* Line mode settings */
+        video_trig_line_no_data[10] = value;
+        video_trig_line_no_data[18] = value;
+        video_trig_line_no_data[30] = value;
+    }
+    else
+    {
+            printf("Out of range\n");
+            return;
+    }
 
-      printf("Updating CH1 Trace Position\n");
-      send_usb_data(tracepos_data, sizeof(tracepos_data));
-      current_ch1_vars.tracepos = updated_ch1_vars.tracepos;
-  }
+    printf("0=MODU_NTSC 1=MODU_PAL 2=MODU_SECAM\n");
+    scanf("%d", &value);
 
-  if (current_ch2_vars.ch_coupling != updated_ch2_vars.ch_coupling)
-  {
-      if(updated_ch2_vars.ch_coupling < NUM_CPL_ENTRIES)
-      {
-          coupling_data[9] = CHANNEL_2;
-          coupling_data[11] = updated_ch2_vars.ch_coupling;
-          printf("Updating CH2 Coupling\n");
-          send_usb_data(coupling_data, sizeof(coupling_data));
-          current_ch2_vars.ch_coupling = updated_ch2_vars.ch_coupling;
-      }
-  }
+    if(value < NUM_MODU_ENTRIES)
+    {
+        /* We dont know if we will use line mode or not. Best to update
+           both messaages at the same time */
+        video_trigger_data[13] = value;
 
-  if (current_ch2_vars.ch_prb_scale != updated_ch2_vars.ch_prb_scale)
-  {
-      if(updated_ch2_vars.ch_prb_scale < NUM_PRB_ENTRIES)
-      {
-          probe_scale_data[9] = CHANNEL_2;
-          probe_scale_data[11] = updated_ch2_vars.ch_prb_scale;
-          printf("Updating CH2 Probe Scale\n");
-          send_usb_data(probe_scale_data, sizeof(probe_scale_data));
-          current_ch2_vars.ch_prb_scale = updated_ch2_vars.ch_prb_scale;
-      }
-  }
+        /* Line mode settings */
+        video_trig_line_no_data[13] = value;
+    }
+    else
+    {
+            printf("Out of range\n");
+            return;
+    }
 
-  if (current_ch2_vars.ch_volt_range != updated_ch2_vars.ch_volt_range)
-  {
-      if(updated_ch2_vars.ch_volt_range < NUM_VOLT_ENTRIES)
-      {
-          volt_range_data[9] = CHANNEL_2;
-          volt_range_data[11] = updated_ch2_vars.ch_volt_range;
-          printf("Updating CH2 Volt Range\n");
-          send_usb_data(volt_range_data, sizeof(volt_range_data));
-          current_ch2_vars.ch_volt_range = updated_ch2_vars.ch_volt_range;
-      }
-  }
+    printf("0=SYNC_LINE 1=SYNC_FIELD 2=SYNC_ODD 3=SYNC_EVEN 4=SYNC_LINE_NO\n");
+    scanf("%d", &value);
 
-  if (current_ch2_vars.tracepos != updated_ch2_vars.tracepos)
-  {
-      tracepos_data[9] = CHANNEL_2;
-      tracepos_data[11] = (char) ((updated_ch2_vars.tracepos >> 24) & 0x000000FF);
-      tracepos_data[12] = (char) ((updated_ch2_vars.tracepos >> 16) & 0x000000FF);
-      tracepos_data[13] = (char) ((updated_ch2_vars.tracepos >> 8) & 0x000000FF);
-      tracepos_data[14] = (char) ((updated_ch2_vars.tracepos) & 0x000000FF);
-      printf("Updating CH2 Trace Position\n");
-      send_usb_data(tracepos_data, sizeof(tracepos_data));
-      current_ch2_vars.tracepos = updated_ch2_vars.tracepos;
-  }
+    if(value < NUM_SYNC_ENTRIES)
+    {
+        if(value != SYNC_LINE_NO)
+        {
+            video_trigger_data[21] = value;
+            printf("Send Video Trigger Command\n");
+            send_usb_data(video_trigger_data, sizeof(video_trigger_data));
+        }
+        /*Line Number Mode. More options to set before send */
+        else
+        {
+            if(video_trig_line_no_data[13] == MODU_NTSC)
+            {
+                printf("Select a Line Number between 1 and 525\n");
+                scanf("%d", &value);
 
-  if (current_timebase_var != updated_timebase_var)
-  {
-      if(updated_timebase_var < NUM_TBASE_ENTRIES)
-      {
-          timebase_data[10] = updated_timebase_var;
-          printf("Updating Timebase\n");
-          send_usb_data(timebase_data, sizeof(timebase_data));
-          current_timebase_var = updated_timebase_var;
-      }
-  }
+                if( (value < 0) || (value > 525) )
+                {
+                    /* Value out of range. Force Line 1 */
+                    printf("Out of range\n");
+                    return;
+                }
+            }
+            else
+            {
+                printf("Select a Line Number between 1 and 625\n");
+                scanf("%d", &value);
 
-  if (current_memory_var != updated_memory_var)
-  {
-      if(updated_memory_var < NUM_MEM_ENTRIES)
-      {
-          memory_range_data[9] = updated_memory_var;
-          printf("Updating Memory Depth\n");
-          send_usb_data(memory_range_data, sizeof(memory_range_data));
-          current_memory_var = updated_memory_var;
-      }
-  }
+                if( (value < 0) || (value > 625) )
+                {
+                    /* Value out of range. Force Line 1 */
+                    printf("Out of range\n");
+                    return;
+                }
+            }
+
+            /* Set the value before send */
+            video_trig_line_no_data[22] = (char) ((value >> 24) & 0x000000FF);
+            video_trig_line_no_data[23] = (char) ((value >> 16) & 0x000000FF);
+            video_trig_line_no_data[24] = (char) ((value >> 8) & 0x000000FF);
+            video_trig_line_no_data[25] = (char) (value & 0x000000FF);
+
+            printf("Send Video LineNo Command\n");
+            send_usb_data(video_trig_line_no_data, sizeof(video_trig_line_no_data));
+        }
+    }
+    else
+    {
+        printf("Out of range\n");
+        return;
+    }
+}
+
+void send_autoset_command(void)
+{
+    printf("Send Autoset Command\n");
+    send_usb_data(autoset_data, sizeof(autoset_data));
+}
+
+
+void send_self_cal_command(void)
+{
+    printf("Send Self Cal Command\n");
+    send_usb_data(self_cal_data, sizeof(self_cal_data));
+}
+
+void send_factory_reset_command(void)
+{
+    printf("Send Factory Reset Command\n");
+    send_usb_data(factory_reset_data, sizeof(factory_reset_data));
 }

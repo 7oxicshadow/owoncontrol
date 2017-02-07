@@ -2,30 +2,12 @@
 #include "main.h"
 #include "owon_commands.h"
 
-void display_current_settings(void)
-{
-    printf("CH1 Coupling = %d, CH1 Probe Scale =  %d, CH1 Volt Scale = %d, CH1 Trace Position = %d\n",
-            current_ch1_vars.ch_coupling,
-            current_ch1_vars.ch_prb_scale,
-            current_ch1_vars.ch_volt_range,
-            current_ch1_vars.tracepos );
-    printf("CH2 Coupling = %d, CH2 Probe Scale =  %d, CH2 Volt Scale = %d, CH2 Trace Position = %d\n",
-            current_ch2_vars.ch_coupling,
-            current_ch2_vars.ch_prb_scale,
-            current_ch2_vars.ch_volt_range,
-            current_ch2_vars.tracepos );
-    printf("Memory Range = %d, Timebase = %d\n",current_memory_var,
-            current_timebase_var);
-}
-
 void display_menu(void)
 {
     int selection = 0;
 
     do
     {
-
-        display_current_settings();
         printf("\n");
         printf("1.  Change CH1 Coupling\n");
         printf("2.  Change CH1 Probe Scale\n");
@@ -37,16 +19,17 @@ void display_menu(void)
         printf("8.  Change CH2 Trace Position\n");
         printf("9.  Change Memory Range\n");
         printf("10. Change Timebase\n");
-        printf("11. Force Trigger (Instant)\n");
-        printf("12. 50pct trigger (Instant)\n");
-        printf("13. 0v trigger (Instant)\n");
-        printf("14. Set Horiz Position (Instant)\n");
-        printf("15. Set Acqu Sample Mode (Instant)\n");
-        printf("16. Set Acqu Peak Mode (Instant)\n");
-        printf("17. Set Acqu Avg Mode (Instant)\n");
-        printf("18. Set Trigger Options (Instant)\n");
-        printf("19. Display Current Settings\n");
-        printf("20. Send Changes.\n");
+        printf("11. Force Trigger\n");
+        printf("12. 50pct trigger\n");
+        printf("13. 0v trigger\n");
+        printf("14. Set Horiz Position\n");
+        printf("15. Set Acqu Sample Mode\n");
+        printf("16. Set Acqu Peak Mode\n");
+        printf("17. Set Acqu Avg Mode\n");
+        printf("18. Set Trigger Options\n");
+        printf("19. Autoset\n");
+        printf("20. Self Cal\n");
+        printf("21. Factory Reset\n");
         printf("\n");
         printf("0.  Quit\n");
         printf("\n");
@@ -107,14 +90,16 @@ void display_menu(void)
                 set_avg_acqu_mode();
                 break;
             case 18:
-                set_trigger_opts();
+                select_trigger_type();
                 break;
             case 19:
-                display_current_settings();
+                send_autoset_command();
                 break;
             case 20:
-                printf("Writing Data...\n");
-                check_changes();
+                send_self_cal_command();
+                break;
+            case 21:
+                send_factory_reset_command();
                 break;
             default:
                 break;

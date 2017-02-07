@@ -14,7 +14,15 @@
 #define FORCE_TRIG_DATA_SIZE     (9)
 #define SET_50PCT_TRIG_DATA_SIZE (9)
 #define SET_0_TRIG_DATA_SIZE     (9)
+#define AUTOSET_DATA_SIZE        (9)
+#define SELF_CAL_DATA_SIZE       (9)
+#define FACTORY_RESET_DATA_SIZE  (9)
+#define VID_TRIG_DATA_SIZE       (33)
+#define VID_TRIG_LINE_DATA_SIZE  (37)
 
+extern char autoset_data[AUTOSET_DATA_SIZE];
+extern char self_cal_data[SELF_CAL_DATA_SIZE];
+extern char factory_reset_data[FACTORY_RESET_DATA_SIZE];
 extern char coupling_data[COUPLING_DATA_SIZE];
 extern char probe_scale_data[PROBE_SCALE_DATA_SIZE];
 extern char volt_range_data[VOLT_SCALE_DATA_SIZE];
@@ -28,6 +36,8 @@ extern char edge_trigger_data[EDGE_TRIG_DATA_SIZE];
 extern char force_trig_data[FORCE_TRIG_DATA_SIZE];
 extern char set_50pct_trig_data[SET_50PCT_TRIG_DATA_SIZE];
 extern char set_0_trig_data[SET_0_TRIG_DATA_SIZE];
+extern char video_trigger_data[VID_TRIG_DATA_SIZE];
+extern char video_trig_line_no_data[VID_TRIG_LINE_DATA_SIZE];
 
 extern libusb_device_handle *dev_handle;
 

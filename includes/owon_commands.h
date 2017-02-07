@@ -59,6 +59,7 @@ typedef enum
 {
     TRIG_TYPE_SINGLE = 0,
     TRIG_TYPE_ALT,
+    TRIG_TYPE_VIDEO,
     NUM_TRIG_ENTRIES
 }trig_type_e;
 
@@ -85,6 +86,25 @@ typedef enum
     TRIG_MODE_ONCE,
     NUM_TRIG_MODE_ENTRIES
 }trig_mode_e;
+
+typedef enum
+{
+    MODU_NTSC = 0,
+    MODU_PAL,
+    MODU_SECAM,
+    NUM_MODU_ENTRIES
+
+}video_modu_e;
+
+typedef enum
+{
+    SYNC_LINE = 0,
+    SYNC_FIELD,
+    SYNC_ODD,
+    SYNC_EVEN,
+    SYNC_LINE_NO,
+    NUM_SYNC_ENTRIES
+}video_sync_e;
 
 /***************************************************
             Common Typedefs
@@ -157,7 +177,12 @@ void set_0_trigger(void);
 void set_horiz_trigger_pos(void);
 void set_acqu_mode(acqu_e mode);
 void set_avg_acqu_mode(void);
-void set_trigger_opts(void);
+void set_edge_or_alt_trigger(int mode);
 void check_changes(void);
+void send_autoset_command(void);
+void send_self_cal_command(void);
+void send_factory_reset_command(void);
+void select_trigger_type(void);
+void set_video_trigger(void);
 
 #endif
