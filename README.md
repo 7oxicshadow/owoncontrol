@@ -1,7 +1,7 @@
-# Owonoscope
+# OwonControl
 
 This is an open source attempt at controlling an Owon SDS7102v oscilloscope using
-usb commnands discovered using wireshark to monitor the traffic from the
+usb commands discovered using wireshark to monitor the traffic from the
 official windows app.
 
 At the moment it is nothing more than a proof of concept to show what can be
