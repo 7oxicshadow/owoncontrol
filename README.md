@@ -1,5 +1,8 @@
 # OwonControl
 
+**** owoncontrol-qt project is now available at: ***********
+https://github.com/7oxicshadow/owoncontrol-qt
+
 This is an open source attempt at controlling an Owon SDS7102v oscilloscope using
 usb commands discovered using wireshark to monitor the traffic from the
 official windows app.
